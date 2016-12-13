@@ -1,0 +1,439 @@
+package my.mini.java.compiler.AST;
+
+import my.mini.java.compiler.AST.nodes.classes.ChildClassNode;
+import my.mini.java.compiler.AST.nodes.classes.MainClassNode;
+import my.mini.java.compiler.AST.nodes.classes.SimpleClassNode;
+import my.mini.java.compiler.AST.nodes.formal_list.ParameterNode;
+import my.mini.java.compiler.AST.nodes.literals.BooleanLiteralNode;
+import my.mini.java.compiler.AST.nodes.literals.IdLiteralNode;
+import my.mini.java.compiler.AST.nodes.literals.IntLiteralNode;
+import my.mini.java.compiler.AST.nodes.methods.BasicMethodNode;
+import my.mini.java.compiler.AST.nodes.methods.OverloadMethodNode;
+import my.mini.java.compiler.AST.nodes.program.ProgramNode;
+import my.mini.java.compiler.AST.nodes.statements.assertions.ArrayAssignAssertNode;
+import my.mini.java.compiler.AST.nodes.statements.assertions.AssignAssertNode;
+import my.mini.java.compiler.AST.nodes.statements.assertions.PrintAssertNode;
+import my.mini.java.compiler.AST.nodes.statements.branches.IfBranchNode;
+import my.mini.java.compiler.AST.nodes.statements.branches.LoopBranchNode;
+import my.mini.java.compiler.AST.nodes.statements.branches.ScopeBranchNode;
+import my.mini.java.compiler.AST.nodes.statements.branches.conditions.AndConditionNode;
+import my.mini.java.compiler.AST.nodes.statements.branches.conditions.LessThanConditionNode;
+import my.mini.java.compiler.AST.nodes.statements.branches.conditions.NestedConditionNode;
+import my.mini.java.compiler.AST.nodes.statements.branches.conditions.NotConditionNode;
+import my.mini.java.compiler.AST.nodes.statements.exprs.*;
+import my.mini.java.compiler.AST.nodes.statements.exprs.atoms.*;
+import my.mini.java.compiler.AST.nodes.statements.exprs.math.MinusMathNode;
+import my.mini.java.compiler.AST.nodes.statements.exprs.math.MultMathNode;
+import my.mini.java.compiler.AST.nodes.statements.exprs.math.PlusMathNode;
+import my.mini.java.compiler.AST.nodes.variable.VarDeclarationNode;
+
+import java.util.HashMap;
+
+/**
+ * Created by alex on 12/4/2016.
+ */
+public class CodeGenerationVisitor extends ASTVisitor<String>
+{
+    private StringBuilder program = new StringBuilder("");
+    private String commentSpaces = "                                                    ";
+    private HashMap<String, Integer> variables = new HashMap<>();
+    private int elseCount = 0;
+    private int nestedCount = -1;
+    private int nFinallyCount = -1;
+    private int finallyCount = 0;
+    private int whileFinally = 0;
+    private int whileAfterCount = 0;
+    private int elseMainCount = 0;
+    private int finallyMainCount = 0;
+
+    @Override
+    public String visit(ProgramNode node)
+    {
+        visit(node.mainClassNode);
+        node.classNodes.forEach(this::visit);
+        return program.toString();
+    }
+
+    @Override
+    public String visit(MainClassNode node)
+    {
+        program.append(".source " + node.className.valueString + ".j" + System.lineSeparator());
+        program.append(".class public " + node.className.valueString + "\n");
+        program.append(".super java/lang/Object\n\n");
+
+        program.append(";================================" + System.lineSeparator());
+        program.append("; default constructor" + System.lineSeparator());
+        program.append(";================================" + System.lineSeparator());
+        program.append(".method public <init>()V" + System.lineSeparator());
+        program.append("    aload 0" + System.lineSeparator());
+        program.append("    invokespecial java/lang/Object/<init>()V" + System.lineSeparator());
+        program.append("    return" + System.lineSeparator());
+        program.append(".end method" + System.lineSeparator() + System.lineSeparator());
+
+        program.append(";================================" + System.lineSeparator());
+        program.append("; main method" + System.lineSeparator());
+        program.append(";================================" + System.lineSeparator());
+        program.append(".method public static main([Ljava/lang/String;)V\n");
+        program.append("    .limit stack 100\n");
+        program.append("    .limit locals 100\n\n");
+        node.varDeclarationNodes.forEach(this::visit);
+        node.statementNodes.forEach(this::visit);
+        program.append("\n");
+        program.append("\n    return\n");
+        program.append(".end method" + System.lineSeparator() + System.lineSeparator());
+
+        return program.toString();
+    }
+
+    @Override
+    public String visit(SimpleClassNode node)
+    {
+        program.append(".source " + node.className.valueString + ".j" + System.lineSeparator());
+        program.append(".class public " + node.className.valueString + "\n");
+        program.append(".super java/lang/Object\n\n");
+
+        program.append(";================================" + System.lineSeparator());
+        program.append("; default constructor" + System.lineSeparator());
+        program.append(";================================" + System.lineSeparator());
+        program.append(".method public <init>()V" + System.lineSeparator());
+        program.append("    aload 0" + System.lineSeparator());
+        program.append("    invokespecial java/lang/Object/<init>()V" + System.lineSeparator());
+        program.append("    return" + System.lineSeparator());
+        program.append(".end method" + System.lineSeparator() + System.lineSeparator());
+
+        node.varDeclarationNodes.forEach(this::visit);
+        node.methodNodes.forEach(this::visit);
+        node.operatorNodes.forEach(this::visit);
+
+        return program.toString();
+    }
+
+    @Override
+    public String visit(ChildClassNode node)
+    {
+        return null;
+    }
+
+    @Override
+    public String visit(BasicMethodNode node)
+    {
+        return null;
+    }
+
+    @Override
+    public String visit(OverloadMethodNode node)
+    {
+        return null;
+    }
+
+    @Override
+    public String visit(ParameterNode node)
+    {
+        return null;
+    }
+
+    @Override
+    public String visit(VarDeclarationNode node)
+    {
+        variables.put(node.varName.valueString, variables.size());
+        program.append("    ldc 0" + commentSpaces + "   ; " + node.varName.valueString + " is being initialized and set to zero/false" + System.lineSeparator());
+        program.append("    istore " + (variables.size() - 1) + commentSpaces + "; Saving variable in locals" + System.lineSeparator());
+        return null;
+    }
+
+    @Override
+    public String visit(BooleanLiteralNode node)
+    {
+        if (node.variablesValue != null)
+            program.append("    ldc " + ((node.variablesValue.getText().equals("false")) ? "0" : "1") + commentSpaces + "   ; Loading in boolean constant(" + node.variablesValue.getText() + ")" + System.lineSeparator());
+        return null;
+    }
+
+    @Override
+    public String visit(IdLiteralNode node)
+    {
+        return node.valueString + System.lineSeparator();
+    }
+
+    @Override
+    public String visit(IntLiteralNode node)
+    {
+        program.append("    ldc " + node.value.getText() + commentSpaces + "   ; Loading int constant" + System.lineSeparator());
+        return null;
+    }
+
+    @Override
+    public String visit(ArrayAssignAssertNode node)
+    {
+        return null;
+    }
+
+    @Override
+    public String visit(AssignAssertNode node)
+    {
+        visit(node.expression);
+        program.append("    istore " + variables.get(node.varName.valueString)
+                + commentSpaces
+                + "; Storing item into " + node.varName.valueString
+                + System.lineSeparator());
+        return null;
+    }
+
+    @Override
+    public String visit(PrintAssertNode node)
+    {
+        program.append(System.lineSeparator() + "    getstatic java/lang/System/out Ljava/io/PrintStream;" + System.lineSeparator());
+        visit(node.expression);
+        program.append("    invokevirtual java/io/PrintStream/println(I)V" + System.lineSeparator());
+        return null;
+    }
+
+    @Override
+    public String visit(AndConditionNode node)
+    {
+        visit(node.leftCondition);
+        if (nestedCount >= 0)
+        {
+            program.append("    ifeq nested_" + nestedCount + commentSpaces.substring(5)
+                    + "; Check if the conditional is true or false" + System.lineSeparator()
+                    + "    ldc 1" + commentSpaces + "   ; Literal true given on successful pass of above conditionals" + System.lineSeparator()
+                    + "    goto nfinally_" + nFinallyCount + System.lineSeparator()
+                    + "nested_" + (nestedCount--) + ":" + System.lineSeparator()
+                    + "    ldc 0" + commentSpaces + "   ; Literal true given on successful pass of above conditionals" + System.lineSeparator()
+                    + "nfinally_" + (nFinallyCount--) + ":" + System.lineSeparator());
+        }
+        else
+        {
+            program.append("    ifeq else_" + elseCount + commentSpaces.substring(3)
+                    + "; Compare the two boolean expression to make sure they are both either true or false" + System.lineSeparator()
+                    + "    ldc 1" + commentSpaces + "   ; Literal true given on successful pass of above conditionals" + System.lineSeparator()
+                    + "    goto finally_" + finallyCount + System.lineSeparator()
+                    + "else_" + elseCount + ":" + System.lineSeparator()
+                    + "    ldc 0" + commentSpaces + "   ; Literal true given on successful pass of above conditionals" + System.lineSeparator()
+                    + "finally_" + finallyCount + ":" + System.lineSeparator());
+        }
+
+        visit(node.rightCondition);
+        if (nestedCount >= 0)
+        {
+            program.append("    ifeq nested_" + nestedCount + commentSpaces.substring(5)
+                    + "; Check if the conditional is true or false" + System.lineSeparator());
+
+            return "    ldc 1" + commentSpaces + "   ; Literal true given on successful pass of above conditionals" + System.lineSeparator()
+                    + "    goto nfinally_" + nFinallyCount + System.lineSeparator()
+                    + "nested_" + (nestedCount--) + ":" + System.lineSeparator()
+                    + "    ldc 0" + commentSpaces + "   ; Literal true given on successful pass of above conditionals" + System.lineSeparator()
+                    + "nfinally_" + (nFinallyCount--) + ":" + System.lineSeparator();
+        }
+        else
+        {
+            program.append("    ifeq else_" + elseCount + commentSpaces.substring(3)
+                    + "; Check if the conditional is true or false" + System.lineSeparator());
+
+            return "    ldc 1" + commentSpaces + "   ; Literal true given on successful pass of above conditionals" + System.lineSeparator()
+                    + "    goto finally_" + finallyCount + System.lineSeparator()
+                    + "else_" + elseCount + ":" + System.lineSeparator()
+                    + "    ldc 0" + commentSpaces + "   ; Literal true given on successful pass of above conditionals" + System.lineSeparator()
+                    + "finally_" + finallyCount + ":" + System.lineSeparator();
+        }
+    }
+
+    @Override
+    public String visit(LessThanConditionNode node)
+    {
+        visit(node.leftCondition);
+        visit(node.rightCondition);
+        if (nestedCount >= 0)
+        {
+            program.append("    if_icmpge nested_" + nestedCount + commentSpaces.substring(10)
+                    + "; Comparing top two elements on the stack" + System.lineSeparator());
+
+            return "    ldc 1" + commentSpaces + "   ; Literal true given on successful pass of above conditional" + System.lineSeparator()
+                    + "    goto nfinally_" + nFinallyCount + System.lineSeparator()
+                    + "nested_" + (nestedCount--) + ":" + System.lineSeparator()
+                    + "    ldc 0" + commentSpaces + "   ; Literal true given on successful pass of above conditionals" + System.lineSeparator()
+                    + "nfinally_" + (nFinallyCount--) + ":" + System.lineSeparator();
+        }
+        else
+        {
+            program.append("    if_icmpge else_" + elseCount + commentSpaces.substring(8)
+                    + "; Comparing top two elements on the stack" + System.lineSeparator());
+
+            return "    ldc 1" + commentSpaces + "   ; Literal true given on successful pass of above conditional" + System.lineSeparator()
+                    + "    goto finally_" + finallyCount + System.lineSeparator()
+                    + "else_" + elseCount + ":" + System.lineSeparator()
+                    + "    ldc 0" + commentSpaces + "   ; Literal true given on successful pass of above conditionals" + System.lineSeparator()
+                    + "finally_" + finallyCount + ":" + System.lineSeparator();
+        }
+    }
+
+    @Override
+    public String visit(NotConditionNode node)
+    {
+        visit(node.condition);
+        if (nestedCount >= 0)
+        {
+            program.append("    ifne nested_" + nestedCount + commentSpaces.substring(5) + "; Not the boolean expression" + System.lineSeparator()
+                            + "    ldc 1" + commentSpaces + "   ; Literal true given on successful pass of above conditional" + System.lineSeparator()
+                            + "    goto nfinally_" + nFinallyCount + System.lineSeparator()
+                            + "nested_" + (nestedCount--) + ":" + System.lineSeparator()
+                            + "    ldc 0" + commentSpaces + "   ; Literal true given on successful pass of above conditionals" + System.lineSeparator()
+                            + "nfinally_" + (nFinallyCount--) + ":" + System.lineSeparator());
+        }
+        else
+        {
+            program.append("    ifne else_" + elseCount + commentSpaces.substring(3) + "; Not the boolean expression" + System.lineSeparator()
+                    + "    ldc 1" + commentSpaces + "   ; Literal true given on successful pass of above conditional" + System.lineSeparator()
+                    + "    goto finally_" + finallyCount + System.lineSeparator()
+                    + "else_" + elseCount + ":" + System.lineSeparator()
+                    + "    ldc 0" + commentSpaces + "   ; Literal true given on successful pass of above conditionals" + System.lineSeparator()
+                    + "finally_" + finallyCount + ":" + System.lineSeparator());
+        }
+        return null;
+    }
+
+    @Override
+    public String visit(NestedConditionNode node)
+    {
+        nestedCount++;
+        nFinallyCount++;
+        program.append(visit(node.condition));
+        return null;
+    }
+
+    @Override
+    public String visit(IfBranchNode node)
+    {
+        if (node.condition instanceof BooleanLiteralNode)
+        {
+            if (((BooleanLiteralNode) node.condition).variablesValue.getText().equals("true"))
+                visit(node.ifStatement);
+            else if (node.thenStatement != null)
+                visit(node.thenStatement);
+            return null;
+        }
+
+        visit(node.condition);
+        if (node.condition instanceof ObjectRefAtomNode || node.condition instanceof NestedConditionNode)
+            program.append("    ifeq elseMain_" + elseMainCount + System.lineSeparator());
+        visit(node.ifStatement);
+        if (node.thenStatement != null)
+            program.append("    goto finallyMain_" + finallyMainCount + System.lineSeparator());
+        program.append("  elseMain_" + (elseMainCount++) + ":" + System.lineSeparator());
+        if (node.thenStatement != null)
+        {
+            visit(node.thenStatement);
+            program.append("  finallyMain_" + (finallyMainCount++) + ":" + System.lineSeparator());
+        }
+        return null;
+    }
+
+    @Override
+    public String visit(LoopBranchNode node)
+    {
+        program.append("whileFinally_" + whileFinally + ":" + System.lineSeparator());
+        visit(node.condition);
+        program.append("    ifeq whileAfter_" + whileAfterCount + System.lineSeparator());
+        visit(node.statement);
+        program.append("    goto whileFinally_" + whileFinally + System.lineSeparator());
+        program.append("  whileAfter_" + (whileAfterCount++) + ":" + System.lineSeparator());
+        whileFinally++;
+        return null;
+    }
+
+    @Override
+    public String visit(ScopeBranchNode node)
+    {
+        node.statementNodes.forEach(this::visit);
+        return null;
+    }
+
+    @Override
+    public String visit(InstatiateAtomNode node)
+    {
+        return null;
+    }
+
+    @Override
+    public String visit(NewIntArrayAtomNode node)
+    {
+        return null;
+    }
+
+    @Override
+    public String visit(ParenExprAtomNode node)
+    {
+        return null;
+    }
+
+    @Override
+    public String visit(RefThisAtomNode node)
+    {
+        return null;
+    }
+
+    @Override
+    public String visit(ObjectRefAtomNode node)
+    {
+        if (!node.methodName.isPresent())
+            program.append("    iload " + variables.get(node.varName.valueString) + commentSpaces + " ; Getting " + node.varName.valueString + "'s value from local pool" + System.lineSeparator());
+        return null;
+    }
+
+    @Override
+    public String visit(MinusMathNode node)
+    {
+        visit(node.leftMathNode);
+        visit(node.rightMathNode);
+        program.append("    isub" + commentSpaces + "    ; Subtracting top elements on stack" + System.lineSeparator());
+        return null;
+    }
+
+    @Override
+    public String visit(MultMathNode node)
+    {
+        visit(node.leftMathNode);
+        visit(node.rightMathNode);
+        program.append("    imul" + commentSpaces + "    ; Multiplying top elements on stack" + System.lineSeparator());
+        return null;
+    }
+
+    @Override
+    public String visit(PlusMathNode node)
+    {
+        visit(node.leftMathNode);
+        visit(node.rightMathNode);
+        program.append("    iadd" + commentSpaces + "    ; Adding top elements on stack" + System.lineSeparator());
+        return null;
+    }
+
+    @Override
+    public String visit(ArrayAccessExprNode node)
+    {
+        return null;
+    }
+
+    @Override
+    public String visit(ArrayLengthExprNode node)
+    {
+        return null;
+    }
+
+    @Override
+    public String visit(CalcExprNode node)
+    {
+        return null;
+    }
+
+    @Override
+    public String visit(MethodCallExprNode node)
+    {
+        return null;
+    }
+
+    @Override
+    public String visit(TrailingExprNode node)
+    {
+        return null;
+    }
+}
