@@ -1,0 +1,115 @@
+    new Some                                                            ; creating object
+    dup                                                                 ; dup the object reference
+    invokespecial Some/<init>()V                                                        ; Calling parent's constructor
+    astore 1                                                            ; store the reference to local variable 1
+    ldc 0                                                               ; size is being initialized and set to zero/false
+    istore 2                                                            ; Saving variable in locals
+    ldc 2                                                            ; push 2 onto the stack
+    newarray int                                                        ; call newarray to make a 2-element int array
+    astore 3                                                            ; store the reference to the array in local variable 1
+    ldc 0                                                               ; count is being initialized and set to zero/false
+    istore 4                                                            ; Saving variable in locals
+    ldc 0                                                               ; num is being initialized and set to zero/false
+    istore 5                                                            ; Saving variable in locals
+    ldc 0                                                               ; Loading int constant
+    istore 5                                                            ; Storing item into num
+    ldc 0                                                               ; Loading int constant
+    istore 4                                                            ; Storing item into count
+    ldc 10                                                               ; Loading int constant
+    istore 2                                                            ; Storing item into size
+    new Some                                                            ; creating object
+    dup                                                                 ; dup the object reference
+    invokespecial Some/<init>()V                                                        ; Calling parent's constructor
+    astore 1                                                            ; Storing array into s
+    iload 2                                                         ; Getting size's value from local pool
+    newarray int                                                        ; initializing int array
+    astore 3                                                            ; Storing array into arr
+finally_0:
+    iload 4                                                         ; Getting count's value from local pool
+    iload 2                                                         ; Getting size's value from local pool
+    if_icmpge else_1                                                ; Comparing top two elements on the stack
+    ldc 1                                                           ; Literal true given on successful pass of above conditional
+    goto finally_1
+else_1:
+    ldc 0                                                           ; Literal true given on successful pass of above conditionals
+finally_1:
+    ifeq else_0
+    aload 3                                                            ; get array reference
+    iload 4                                                            ; Getting 'count' from the local pool
+    iload 4                                                         ; Getting count's value from local pool
+    ldc 1                                                               ; Loading int constant
+    iadd                                                            ; Adding top elements on stack
+    iastore                                                            ; storing above variable
+    iload 4                                                         ; Getting count's value from local pool
+    ldc 1                                                               ; Loading int constant
+    iadd                                                            ; Adding top elements on stack
+    istore 4                                                            ; Storing item into count
+    goto finally_0
+  else_0:
+finally_2:
+    iload 5                                                         ; Getting num's value from local pool
+    ldc 10                                                               ; Loading int constant
+    if_icmpge else_3                                                ; Comparing top two elements on the stack
+    ldc 1                                                           ; Literal true given on successful pass of above conditional
+    goto finally_3
+else_3:
+    ldc 0                                                           ; Literal true given on successful pass of above conditionals
+finally_3:
+    ifeq else_2
+    ldc 0                                                               ; Loading int constant
+    istore 4                                                            ; Storing item into count
+finally_3:
+    iload 4                                                         ; Getting count's value from local pool
+    iload 2                                                         ; Getting size's value from local pool
+    if_icmpge else_4                                                ; Comparing top two elements on the stack
+    ldc 1                                                           ; Literal true given on successful pass of above conditional
+    goto finally_4
+else_4:
+    ldc 0                                                           ; Literal true given on successful pass of above conditionals
+finally_4:
+    ifeq else_3
+    aload 3                                                            ; accessing array in memory
+    iload 4                                                         ; Getting count's value from local pool
+    iaload                                                            ; pulling int from array
+    ldc 8                                                               ; Loading int constant
+    if_icmpge else_5                                                ; Comparing top two elements on the stack
+    ldc 1                                                           ; Literal true given on successful pass of above conditional
+    goto finally_5
+else_5:
+    ldc 0                                                           ; Literal true given on successful pass of above conditionals
+finally_5:
+    ifeq else_5
+
+    getstatic java/lang/System/out Ljava/io/PrintStream;
+    aload 3                                                            ; accessing array in memory
+    iload 4                                                         ; Getting count's value from local pool
+    iaload                                                            ; pulling int from array
+    ldc 2                                                               ; Loading int constant
+    imul                                                            ; Multiplying top elements on stack
+    invokevirtual java/io/PrintStream/println(I)V
+  else_5:
+    iload 4                                                         ; Getting count's value from local pool
+    ldc 1                                                               ; Loading int constant
+    iadd                                                            ; Adding top elements on stack
+    istore 4                                                            ; Storing item into count
+    goto finally_3
+  else_3:
+    iload 5                                                         ; Getting num's value from local pool
+    ldc 1                                                               ; Loading int constant
+    iadd                                                            ; Adding top elements on stack
+    istore 5                                                            ; Storing item into num
+    goto finally_2
+  else_2:
+
+    getstatic java/lang/System/out Ljava/io/PrintStream;
+    ldc 5                                                               ; Loading int constant
+    invokevirtual java/io/PrintStream/println(I)V
+
+    getstatic java/lang/System/out Ljava/io/PrintStream;
+    aload 1                                                            ; Loading object
+    invokevirtual Some/getNumb()I
+    invokevirtual java/io/PrintStream/println(I)V
+
+
+    return
+.end method
