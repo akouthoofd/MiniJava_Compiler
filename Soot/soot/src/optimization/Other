@@ -1,0 +1,150 @@
+/*class Evaluator extends SceneTransformer
+{
+    static String oldPath;
+    private static Evaluator instance = new Evaluator();
+    DecimalFormat format = new DecimalFormat("0.0");
+
+    private Evaluator()
+    {
+    }
+
+    public static Evaluator v()
+    {
+        return instance;
+    }
+
+    protected void internalTransform(String phaseName, Map options)
+    {
+        long classCount = 0;
+        long stmtCount = 0;
+        long methodCount = 0;
+        // Pre-process each class, constructing the invokeToNumberMap {
+        Iterator classIt = Scene.v().getApplicationClasses().iterator();
+        while(classIt.hasNext())
+        {
+            SootClass sClass = (SootClass) classIt.next();
+            classCount++;
+            Iterator methodIt = sClass.getMethods().iterator();
+            while (methodIt.hasNext())
+            {
+                SootMethod m = (SootMethod) methodIt.next();
+                methodCount++;
+                if (!m.isConcrete()) continue;
+                JimpleBody body = (JimpleBody) m.retrieveActiveBody();
+                stmtCount += body.getUnits().size();
+            }
+        }
+        System.out.println("Classes: \t"+classCount);System.out.println("Methods: \t"+methodCount+" ("+format.format((double)methodCount/classCount)+" methods/class)");System.out.println("Stmts: \t"+stmtCount+" ("+format.format((double)stmtCount/methodCount)+" units/methods)");
+        System.exit(0);
+    }
+}*/
+
+
+class SimpleLiveLocal
+{
+    protected Map<Unit, List> unitToGuaranteedDefs;
+
+    public SimpleLiveLocal(UnitGraph graph)
+    {
+        if (Options.v().verbose())
+            G.v().out.println("[" + graph.getBody().getMethod().getName() +
+                    "]     Constructing SimpleLiveLocalAnalysis...");
+
+        SimpleLiveLocalAnalysis analysis = new SimpleLiveLocalAnalysis(graph);
+
+        // build map
+        {
+            unitToGuaranteedDefs = new HashMap<>(graph.size() * 2 + 1, 0.7f);
+            Iterator<Unit> unitIt = graph.iterator();
+
+            while (unitIt.hasNext())
+            {
+                Unit s = unitIt.next();
+                FlowSet set = analysis.getFlowBefore(s);
+                unitToGuaranteedDefs.put
+                        (s, Collections.unmodifiableList(set.toList()));
+            }
+        }
+    }
+
+    /**
+     * Returns a list of locals guaranteed to be defined at (just
+     * before) program point <tt>s</tt>.
+     **/
+    public List getGuaranteedDefs(Unit s)
+    {
+        return unitToGuaranteedDefs.get(s);
+    }
+}
+
+class SimpleLiveLocalAnalysis extends BackwardFlowAnalysis<Unit, FlowSet<ValueBox>>
+{
+    FlowSet<ValueBox> emptySet = new ArraySparseSet<>();
+    Map<Unit, FlowSet<ValueBox>> unitToGenerateSet;
+//    Map unitToPreserveSet;
+
+    /**
+     * Construct the analysis from a UnitGraph representation of a Body.
+     *
+     * @param graph
+     */
+    public SimpleLiveLocalAnalysis(UnitGraph graph)
+    {
+        super(graph);
+        if(Options.v().verbose())
+            G.v().out.println("[" + graph.getBody().getMethod().getName() +
+                    "]     Constructing CombinedDUAnalysis...");
+
+        DominatorsFinder df = new MHGDominatorsFinder(graph);
+        unitToGenerateSet = new HashMap<>(graph.size() * 2 + 1, 0.7f);
+
+        // pre-compute generate sets
+        for(Iterator unitIt = graph.iterator(); unitIt.hasNext();){
+            Unit s = (Unit) unitIt.next();
+            FlowSet genSet = emptySet.clone();
+
+            for(Iterator domsIt = df.getDominators(s).iterator(); domsIt.hasNext();){
+                Unit dom = (Unit) domsIt.next();
+                for(Iterator boxIt = dom.getDefBoxes().iterator(); boxIt.hasNext();){
+                    ValueBox box = (ValueBox) boxIt.next();
+                    if(box.getValue() instanceof Local)
+                        genSet.add(box.getValue(), genSet);
+                }
+            }
+
+            unitToGenerateSet.put(s, genSet);
+        }
+
+        doAnalysis();
+    }
+
+    @Override
+    protected FlowSet newInitialFlow()
+    {
+        return emptySet.clone();
+    }
+
+    @Override
+    protected FlowSet<ValueBox> entryInitialFlow()
+    {
+        return emptySet.clone();
+    }
+
+    @Override
+    protected void merge(FlowSet<ValueBox> in1, FlowSet<ValueBox> in2, FlowSet<ValueBox> out)
+    {
+        in1.intersection(in2, out);
+    }
+
+    @Override
+    protected void copy(FlowSet<ValueBox> source, FlowSet<ValueBox> dest)
+    {
+        source.copy(dest);
+    }
+
+    @Override
+    protected void flowThrough(FlowSet<ValueBox> in, Unit d, FlowSet<ValueBox> out)
+    {
+        in.union(unitToGenerateSet.get(d), out);
+    }
+}
